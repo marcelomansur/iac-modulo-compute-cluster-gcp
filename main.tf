@@ -1,44 +1,53 @@
-provider "google" {
-  project     = "hardening-322021"
-  region      = "us-east1"
-  credentials = "/gcloud/application_default_credentials.json"
-  # version = "3.0"
-}
-
 locals {
-  project        = "hardening-322021"
-  network        = "default"
-
-  node_pools = [
-    {
-      name = "cp-node" # vai virar o name do cluster + instance_name + count
-      # exemplo: "mentoria-cluster-cp-node-1"
-      machine_type            = "e2-medium"
-      node_locations          = "us-central1-b,us-central1-c" # no loop vai virar 1 zone por node ou instancia
-      count                   = 1                             # quantidade de nós
-      instance_image          = "debian-cloud/debian-9"       # é a imagem da maquina
-      # metadata_startup_script = "startup-cp.sh"               # tem que ser implementado no modulo iac-modulo-compute-gcp
-    },
-    {
-      name = "worker-node" # vai virar o name do cluster + instance_name + count
-      # exemplo: "mentoria-cluster-worker-node-1"
-      # "mentoria-cluster-worker-node-2"
-      # "mentoria-cluster-worker-node-3"
-      machine_type            = "e2-medium"
-      node_locations          = "us-central1-b,us-central1-c" # no loop vai virar 1 zone por node ou instancia
-      count                   = 1                             # quantidade de nós
-      instance_image          = "debian-cloud/debian-9"       # é a imagem da maquina
-      # metadata_startup_script = "startup-worker.sh"
-    },
-  ]
-
+  available-zones = length(data.google_compute_zones.available.names)
 }
 
-module "sub" {
-  source = "./submodule"
-  count = length(local.node_pools)
+data "google_compute_zones" "available" {
+}
 
-  project = local.project
-  network = local.network
-  node_pool = element(local.node_pools, count.index)
+
+module "compute_gcp_cp" {
+  source = "github.com/mentoriaiac/iac-modulo-compute-gcp.git"
+
+  count = var.node_pools.cp-node.count == 0 ? 0 : var.node_pools.cp-node.count
+
+  project = var.project
+  network = var.network
+
+  instance_image = lookup(var.node_pools.cp-node, "instance_image")
+  machine_type   = lookup(var.node_pools.cp-node, "machine_type")
+
+  zone          = data.google_compute_zones.available.names[count.index % local.available-zones]
+  instance_name = "${lookup(var.node_pools.cp-node, "name")}-${count.index + 1}"
+
+  # TODO: criar essa input no modulo compute
+  # metadata_startup_script = metadata_startup_script
+
+  # TODO: como receber labels no hash de node_pools
+  labels = {
+    value = "key"
+  }
+}
+
+module "compute_gcp_worker" {
+  source = "github.com/mentoriaiac/iac-modulo-compute-gcp.git"
+
+  count = var.node_pools.worker-node.count == 0 ? 0 : var.node_pools.worker-node.count
+
+  project = var.project
+  network = var.network
+
+  instance_image = lookup(var.node_pools.worker-node, "instance_image")
+  machine_type   = lookup(var.node_pools.worker-node, "machine_type")
+
+  zone          = data.google_compute_zones.available.names[count.index % local.available-zones]
+  instance_name = "${lookup(var.node_pools.worker-node, "name")}-${count.index + 1}"
+
+  # TODO: criar essa input no modulo compute
+  # metadata_startup_script = metadata_startup_script
+
+  # TODO: como receber labels no hash de node_pools
+  labels = {
+    value = "key"
+  }
 }

@@ -1,6 +1,8 @@
 MAKEFLAGS  	      += --silent
 SHELL      	      = /bin/bash
 
+MODULE_DIR=$(shell dirname $$PWD)
+
 ifndef TARGET_FOLDER
 	TARGET_FOLDER := ""
 endif
@@ -28,11 +30,11 @@ help: ## This help
 
 terraform-tfsec: ## Execute tfsec in terraform files
 	echo "STEP: terraform-tfsec - Execute tfsec in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app tfsec/tfsec . --no-color
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} tfsec/tfsec . --no-color
 
 terraform-validate: ## Execute terraform validate in terraform files
 	echo "STEP: terraform-validate - Execute terraform validate in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) validate
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) validate
 
 terraform-clean: ## Remove terraform files untracked in git
 	echo "STEP: terraform-clean - Remove terraform files untracked in git"
@@ -43,7 +45,7 @@ terraform-clean: ## Remove terraform files untracked in git
 
 terraform-fmt: ## Execute terraform fmt in terraform files
 	echo "STEP: terraform-fmt - Execute terraform fmt in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app hashicorp/terraform:$(TERRAFORM_VERSION) fmt -recursive
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} hashicorp/terraform:$(TERRAFORM_VERSION) fmt -recursive
 
 terraform-generate-backend-gcs:  ## Generate file backend.tf on Google Cloud Storage
 	echo "STEP: terraform-generate-backend - Generate file backend.tf"
@@ -52,19 +54,19 @@ terraform-generate-backend-gcs:  ## Generate file backend.tf on Google Cloud Sto
 
 terraform-init: ## Execute terraform init in terraform files
 	echo "STEP: terraform-init - Execute terraform init in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) init
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) init
 
 terraform-plan: terraform-validate  ## Execute terraform validate, tfsec and plan in terraform files
 	echo "STEP: terraform-plan - Execute terraform validate, tfsec and plan in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) plan -out ${TFPLAN}
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) plan -out ${TFPLAN}
 
 terraform-apply: ## Execute terraform apply in terraform files
 	echo "STEP: terraform-apply - Execute terraform apply in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) apply -auto-approve ${TFPLAN}
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) apply -auto-approve ${TFPLAN}
 	
 terraform-destroy: ## Execute terraform destroy in terraform files
 	echo "STEP: terraform-destroy - Execute terraform destroy in terraform files"
-	docker run --rm -v $$PWD/${TARGET_FOLDER}:/app -w /app --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) destroy -auto-approve
+	docker run --rm -v $(MODULE_DIR):/app -w /app/${TARGET_FOLDER} --env-file $(TARGET_ENV) hashicorp/terraform:$(TERRAFORM_VERSION) destroy -auto-approve
 
 fmt: terraform-fmt ## alias for terraform fmt
 plan: fmt terraform-init terraform-plan ## Execute terraform fmt, init, plan in terraform files
